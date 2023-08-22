@@ -1,6 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2007-2023 VMware, Inc.
+ * Copyright 2007 VMware, Inc.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -589,8 +589,7 @@ generic_run_one(struct translate_generic *tg,
                 unsigned elt,
                 unsigned start_instance,
                 unsigned instance_id,
-                void *vert,
-                unsigned index_size)
+                void *vert)
 {
    unsigned nr_attrs = tg->nr_attrib;
    unsigned attr;
@@ -614,10 +613,8 @@ generic_run_one(struct translate_generic *tg,
          }
          else {
             index = elt;
-            if (index_size > 0) {
-               /* clamp to avoid going out of bounds */
-               index = MIN2(index, tg->attrib[attr].max_index);
-            }
+            /* clamp to avoid going out of bounds */
+            index = MIN2(index, tg->attrib[attr].max_index);
          }
 
          src = tg->attrib[attr].input_ptr +
@@ -667,7 +664,7 @@ generic_run_elts(struct translate *translate,
    unsigned i;
 
    for (i = 0; i < count; i++) {
-      generic_run_one(tg, *elts++, start_instance, instance_id, vert, 4);
+      generic_run_one(tg, *elts++, start_instance, instance_id, vert);
       vert += tg->translate.key.output_stride;
    }
 }
@@ -685,7 +682,7 @@ generic_run_elts16(struct translate *translate,
    unsigned i;
 
    for (i = 0; i < count; i++) {
-      generic_run_one(tg, *elts++, start_instance, instance_id, vert, 2);
+      generic_run_one(tg, *elts++, start_instance, instance_id, vert);
       vert += tg->translate.key.output_stride;
    }
 }
@@ -703,7 +700,7 @@ generic_run_elts8(struct translate *translate,
    unsigned i;
 
    for (i = 0; i < count; i++) {
-      generic_run_one(tg, *elts++, start_instance, instance_id, vert, 1);
+      generic_run_one(tg, *elts++, start_instance, instance_id, vert);
       vert += tg->translate.key.output_stride;
    }
 }
@@ -721,7 +718,7 @@ generic_run(struct translate *translate,
    unsigned i;
 
    for (i = 0; i < count; i++) {
-      generic_run_one(tg, start + i, start_instance, instance_id, vert, 0);
+      generic_run_one(tg, start + i, start_instance, instance_id, vert);
       vert += tg->translate.key.output_stride;
    }
 }

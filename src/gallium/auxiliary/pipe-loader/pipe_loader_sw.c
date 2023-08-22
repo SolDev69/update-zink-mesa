@@ -382,7 +382,6 @@ pipe_loader_sw_release(struct pipe_loader_device **dev)
    UNUSED struct pipe_loader_sw_device *sdev =
       pipe_loader_sw_device(*dev);
 
-   sdev->ws->destroy(sdev->ws);
 #ifndef GALLIUM_STATIC_TARGETS
    if (sdev->lib)
       util_dl_close(sdev->lib);

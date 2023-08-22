@@ -224,15 +224,14 @@ struct wait_entry {
    bool join(const wait_entry& other)
    {
       bool changed = (other.events & ~events) || (other.counters & ~counters) ||
-                     (other.wait_on_read && !wait_on_read) || (other.vmem_types & !vmem_types) ||
-                     (!other.logical && logical);
+                     (other.wait_on_read && !wait_on_read) || (other.vmem_types & !vmem_types);
       events |= other.events;
       counters |= other.counters;
       changed |= imm.combine(other.imm);
       changed |= delay.combine(other.delay);
       wait_on_read |= other.wait_on_read;
       vmem_types |= other.vmem_types;
-      logical &= other.logical;
+      assert(logical == other.logical);
       return changed;
    }
 
@@ -373,7 +372,7 @@ check_instr(wait_ctx& ctx, wait_imm& wait, alu_delay_info& delay, Instruction* i
             continue;
 
          wait.combine(it->second.imm);
-         if (instr->isVALU() || instr->isSALU() || instr->isVINTERP_INREG())
+         if (instr->isVALU() || instr->isSALU())
             delay.combine(it->second.delay);
       }
    }
@@ -550,21 +549,6 @@ kill(wait_imm& imm, alu_delay_info& delay, Instruction* instr, wait_ctx& ctx,
    if (instr->opcode == aco_opcode::ds_ordered_count &&
        ((instr->ds().offset1 | (instr->ds().offset0 >> 8)) & 0x1)) {
       imm.combine(ctx.barrier_imm[ffs(storage_gds) - 1]);
-   }
-
-   if (ctx.program->early_rast && instr->opcode == aco_opcode::exp) {
-      if (instr->exp().dest >= V_008DFC_SQ_EXP_POS && instr->exp().dest < V_008DFC_SQ_EXP_PRIM) {
-
-         /* With early_rast, the HW will start clipping and rasterization after the 1st DONE pos
-          * export. Wait for all stores (and atomics) to complete, so PS can read them.
-          * TODO: This only really applies to DONE pos exports.
-          *       Consider setting the DONE bit earlier.
-          */
-         if (ctx.vs_cnt > 0)
-            imm.vs = 0;
-         if (ctx.vm_cnt > 0)
-            imm.vm = 0;
-      }
    }
 
    if (instr->opcode == aco_opcode::p_barrier)
@@ -752,7 +736,7 @@ update_counters_for_flat_load(wait_ctx& ctx, memory_sync_info sync = memory_sync
 
 void
 insert_wait_entry(wait_ctx& ctx, PhysReg reg, RegClass rc, wait_event event, bool wait_on_read,
-                  uint8_t vmem_types = 0, unsigned cycles = 0, bool force_linear = false)
+                  uint8_t vmem_types = 0, unsigned cycles = 0)
 {
    uint16_t counters = get_counters_for_event(event);
    wait_imm imm;
@@ -776,7 +760,7 @@ insert_wait_entry(wait_ctx& ctx, PhysReg reg, RegClass rc, wait_event event, boo
       delay.salu_cycles = cycles;
    }
 
-   wait_entry new_entry(event, imm, delay, !rc.is_linear() && !force_linear, wait_on_read);
+   wait_entry new_entry(event, imm, delay, !rc.is_linear(), wait_on_read);
    new_entry.vmem_types |= vmem_types;
 
    for (unsigned i = 0; i < rc.size(); i++) {
@@ -797,21 +781,14 @@ void
 insert_wait_entry(wait_ctx& ctx, Definition def, wait_event event, uint8_t vmem_types = 0,
                   unsigned cycles = 0)
 {
-   /* We can't safely write to unwritten destination VGPR lanes on GFX11 without waiting for
-    * the load to finish.
-    */
-   bool force_linear =
-      ctx.gfx_level >= GFX11 && (event & (event_lds | event_gds | event_vmem | event_flat));
-
-   insert_wait_entry(ctx, def.physReg(), def.regClass(), event, true, vmem_types, cycles,
-                     force_linear);
+   insert_wait_entry(ctx, def.physReg(), def.regClass(), event, true, vmem_types, cycles);
 }
 
 void
 gen_alu(Instruction* instr, wait_ctx& ctx)
 {
    Instruction_cycle_info cycle_info = get_cycle_info(*ctx.program, *instr);
-   bool is_valu = instr->isVALU() || instr->isVINTERP_INREG();
+   bool is_valu = instr->isVALU();
    bool is_trans = instr->isTrans();
    bool clear = instr->isEXP() || instr->isDS() || instr->isMIMG() || instr->isFlatLike() ||
                 instr->isMUBUF() || instr->isMTBUF();
@@ -1055,11 +1032,9 @@ insert_wait_states(Program* program)
    std::stack<unsigned, std::vector<unsigned>> loop_header_indices;
    unsigned loop_progress = 0;
 
-   if (program->stage.has(SWStage::VS) && program->info.vs.dynamic_inputs) {
-      for (Definition def : program->vs_inputs) {
-         update_counters(in_ctx[0], event_vmem);
-         insert_wait_entry(in_ctx[0], def, event_vmem);
-      }
+   for (Definition def : program->args_pending_vmem) {
+      update_counters(in_ctx[0], event_vmem);
+      insert_wait_entry(in_ctx[0], def, event_vmem);
    }
 
    for (unsigned i = 0; i < program->blocks.size();) {

@@ -160,10 +160,10 @@ blob_write_bytes(struct blob *blob, const void *bytes, size_t to_write)
    if (! grow_to_fit(blob, to_write))
        return false;
 
-   if (blob->data && to_write > 0) {
-      VG(VALGRIND_CHECK_MEM_IS_DEFINED(bytes, to_write));
+   VG(VALGRIND_CHECK_MEM_IS_DEFINED(bytes, to_write));
+
+   if (blob->data && to_write > 0)
       memcpy(blob->data + blob->size, bytes, to_write);
-   }
    blob->size += to_write;
 
    return true;

@@ -41,6 +41,7 @@ struct kopper_swapchain_image {
    int age;
    VkImage image;
    VkSemaphore acquire;
+   VkImageLayout layout;
 };
 
 struct kopper_swapchain {
@@ -59,6 +60,8 @@ struct kopper_swapchain {
 };
 
 enum kopper_type {
+   KOPPER_ANDROID,
+   KOPPER_METAL,
    KOPPER_X11,
    KOPPER_WAYLAND,
    KOPPER_WIN32

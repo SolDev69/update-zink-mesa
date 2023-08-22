@@ -100,8 +100,9 @@ isl_tiled_memcpy = static_library(
   include_directories : [
     inc_include, inc_src, inc_mesa, inc_gallium, inc_intel,
   ],
+
   dependencies : [idep_mesautil, idep_intel_dev],
-  c_args : [no_override_init_args, c_sse2_arg],
+  c_args : [no_override_init_args, sse2_arg],
   gnu_symbol_visibility : 'hidden',
   extra_files : ['isl_tiled_memcpy.c']
 )
@@ -115,7 +116,7 @@ if with_sse41
     ],
     dependencies : [idep_mesautil, idep_intel_dev],
     link_args : ['-Wl,--exclude-libs=ALL'],
-    c_args : [no_override_init_args, '-msse2', sse41_args],
+    c_args : [no_override_init_args, sse2_arg, sse41_args],
     gnu_symbol_visibility : 'hidden',
     extra_files : ['isl_tiled_memcpy.c']
   )
@@ -170,6 +171,6 @@ if with_tests
       cpp_args : '-DIN_UNIT_TEST',
     ),
     suite : ['intel'],
-    protocol : gtest_test_protocol,
+    protocol : 'gtest',
   )
 endif

@@ -48,23 +48,21 @@ intel_hasvk_icd = custom_target(
   install : true,
 )
 
-if meson.version().version_compare('>= 0.58')
-  _dev_icdname = 'intel_hasvk_devenv_icd.@0@.json'.format(host_machine.cpu())
-  custom_target(
-    'intel_hasvk_devenv_icd',
-    input : [vk_icd_gen, vk_api_xml],
-    output : _dev_icdname,
-    command : [
-      prog_python, '@INPUT0@',
-      '--api-version', '1.3', '--xml', '@INPUT1@',
-      '--lib-path', meson.current_build_dir() / 'libvulkan_intel_hasvk.so',
-      '--out', '@OUTPUT@',
-    ],
-    build_by_default : true,
-  )
+_dev_icdname = 'intel_hasvk_devenv_icd.@0@.json'.format(host_machine.cpu())
+_dev_icd = custom_target(
+  'intel_hasvk_devenv_icd',
+  input : [vk_icd_gen, vk_api_xml],
+  output : _dev_icdname,
+  command : [
+    prog_python, '@INPUT0@',
+    '--api-version', '1.3', '--xml', '@INPUT1@',
+    '--lib-path', meson.current_build_dir() / 'libvulkan_intel_hasvk.so',
+    '--out', '@OUTPUT@',
+  ],
+  build_by_default : true,
+)
 
-  devenv.append('VK_ICD_FILENAMES', meson.current_build_dir() / _dev_icdname)
-endif
+devenv.append('VK_ICD_FILENAMES', _dev_icd.full_path())
 
 libanv_per_hw_ver_libs = []
 anv_per_hw_ver_files = files(
@@ -86,7 +84,7 @@ foreach g : [['70', ['gfx7_cmd_buffer.c']],
       inc_include, inc_src, inc_mapi, inc_mesa, inc_gallium, inc_compiler, inc_intel,
     ],
     c_args : [
-      no_override_init_args, c_sse2_args,
+      no_override_init_args, sse2_args,
       '-DGFX_VERx10=@0@'.format(_gfx_ver),
     ],
     gnu_symbol_visibility : 'hidden',
@@ -140,7 +138,7 @@ anv_deps = [
 ]
 anv_flags = [
   no_override_init_args,
-  c_sse2_args,
+  sse2_args,
 ]
 
 anv_cpp_flags = []
@@ -245,7 +243,7 @@ if with_tests
       executable(
         t,
         ['tests/@0@.c'.format(t), anv_hasvk_entrypoints[0]],
-        c_args : [ c_sse2_args ],
+        c_args : [ sse2_args ],
         link_with : libvulkan_intel_hasvk_test,
         dependencies : [
           dep_libdrm, dep_thread, dep_m, dep_valgrind,

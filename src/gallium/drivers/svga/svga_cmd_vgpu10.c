@@ -853,12 +853,19 @@ SVGA3D_vgpu10_DefineElementLayout(struct svga_winsys_context *swc,
                                   const SVGA3dInputElementDesc *elements)
 {
    SVGA3dCmdDXDefineElementLayout *cmd;
+   unsigned i;
 
    cmd = SVGA3D_FIFOReserve(swc, SVGA_3D_CMD_DX_DEFINE_ELEMENTLAYOUT,
                             sizeof(SVGA3dCmdDXDefineElementLayout) +
                             count * sizeof(SVGA3dInputElementDesc), 0);
    if (!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
+
+   /* check that all offsets are multiples of four */
+   for (i = 0; i < count; i++) {
+      assert(elements[i].alignedByteOffset % 4 == 0);
+   }
+   (void) i; /* silence unused var in release build */
 
    cmd->elementLayoutId = elementLayoutId;
    memcpy(cmd + 1, elements, count * sizeof(SVGA3dInputElementDesc));
@@ -1187,6 +1194,8 @@ SVGA3D_vgpu10_SetVertexBuffers(struct svga_winsys_context *swc,
    for (i = 0; i < count; i++) {
       bufs[i].stride = bufferInfo[i].stride;
       bufs[i].offset = bufferInfo[i].offset;
+      assert(bufs[i].stride % 4 == 0);
+      assert(bufs[i].offset % 4 == 0);
       swc->surface_relocation(swc, &bufs[i].sid, NULL, surfaces[i],
                               SVGA_RELOC_READ);
    }
@@ -1222,6 +1231,8 @@ SVGA3D_vgpu10_SetVertexBuffersOffsetAndSize(struct svga_winsys_context *swc,
       bufs[i].stride = bufferInfo[i].stride;
       bufs[i].offset = bufferInfo[i].offset;
       bufs[i].sizeInBytes = bufferInfo[i].sizeInBytes;
+      assert(bufs[i].stride % 4 == 0);
+      assert(bufs[i].offset % 4 == 0);
    }
 
    swc->commit(swc);

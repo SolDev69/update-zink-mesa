@@ -27,10 +27,10 @@ endif
 
 libosmesa_st = static_library(
   'osmesa_st',
-  'osmesa.c',
+  'osmesa_bufferless.c',
   c_args : osmesa_st_c_args,
   include_directories : [
-    inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_mapi, inc_mesa,
+    inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_gallium_drivers, inc_mapi, inc_mesa,
   ],
   dependencies : [idep_mesautil],
 )

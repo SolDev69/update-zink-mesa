@@ -42,6 +42,8 @@ EXTENSIONS = [
     Extension("VK_MVK_moltenvk",
         nonstandard=True),
     Extension("VK_KHR_surface"),
+    Extension("VK_KHR_android_surface"),
+    Extension("VK_EXT_metal_surface"),
     Extension("VK_EXT_headless_surface"),
     Extension("VK_KHR_wayland_surface"),
     Extension("VK_KHR_xcb_surface",
@@ -69,7 +71,7 @@ header_code = """
 
 #include "os/os_process.h"
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #if defined(__APPLE__)
 // Source of MVK_VERSION

@@ -97,12 +97,8 @@ merge_driconf(const driOptionDescription *driver_driconf, unsigned driver_count,
       return NULL;
    }
 
-   if (gallium_count)
-      memcpy(merged, gallium_driconf, sizeof(*merged) * gallium_count);
-   if (driver_count) {
-      memcpy(&merged[gallium_count], driver_driconf,
-             sizeof(*merged) * driver_count);
-   }
+   memcpy(merged, gallium_driconf, sizeof(*merged) * gallium_count);
+   memcpy(&merged[gallium_count], driver_driconf, sizeof(*merged) * driver_count);
 
    *merged_count = driver_count + gallium_count;
    return merged;
